@@ -1,0 +1,25 @@
+import os
+
+COMPLETED_STATUSES = ["E_APPROVED"]
+NOT_STARTED_STATUS = "E_WAITING_HANDLING"
+SNAPSHOT_WINDOW = 5
+LOW_COMPLETION_THRESHOLD = 50.0
+
+def _load_accounts():
+    try:
+        import streamlit as st
+        if "accounts" in st.secrets:
+            return {name: {"password": creds["password"], "role": creds["role"]}
+                    for name, creds in st.secrets["accounts"].items()}
+    except Exception:
+        pass
+    return {
+        "Admins": {"password": "Admin@41+", "role": "admin"},
+        "Usr":    {"password": "123456",    "role": "user"},
+    }
+
+ACCOUNTS = _load_accounts()
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+GOAL_SETTING_DATA   = os.path.join(DATA_DIR, "goal_setting_processed.json")
+ISSUE_TRACKING_DATA = os.path.join(DATA_DIR, "issue_tracking_processed.json")
