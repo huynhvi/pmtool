@@ -16,7 +16,7 @@ The system must support the following default accounts:
 
 ### 2.2 User Account
 - Account: Usr
-- Password: uSR@2226***
+- Password: 123456
 - Role: User
 
 ---
