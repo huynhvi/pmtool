@@ -6,6 +6,7 @@ Switches automatically based on whether st.secrets["supabase"] exists.
 """
 import os
 import io
+from typing import Optional
 import streamlit as st
 
 BUCKET = "pmtool-data"
@@ -45,7 +46,7 @@ def save_file(content: str, filename: str, local_path: str) -> None:
             f.write(content)
 
 
-def load_file(filename: str, local_path: str) -> str | None:
+def load_file(filename: str, local_path: str) -> Optional[str]:
     """Load UTF-8 string. Returns None if file not found."""
     if _use_cloud():
         try:
@@ -79,7 +80,7 @@ def save_binary(content: bytes, cloud_path: str, local_path: str) -> None:
             f.write(content)
 
 
-def load_binary(cloud_path: str, local_path: str) -> bytes | None:
+def load_binary(cloud_path: str, local_path: str) -> Optional[bytes]:
     """Load binary content. Returns None if file not found."""
     if _use_cloud():
         try:

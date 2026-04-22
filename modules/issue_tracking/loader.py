@@ -1,5 +1,6 @@
 import io
 import os
+from typing import Optional
 import pandas as pd
 from config import ISSUE_SNAPSHOTS_DIR, ISSUE_SNAPSHOTS_CLOUD_PREFIX, SNAPSHOT_WINDOW
 from utils import storage
@@ -10,7 +11,7 @@ def list_snapshot_files() -> list:
     return storage.list_files(ISSUE_SNAPSHOTS_CLOUD_PREFIX, ISSUE_SNAPSHOTS_DIR)
 
 
-def load_snapshot(filename: str) -> pd.DataFrame | None:
+def load_snapshot(filename: str) -> Optional[pd.DataFrame]:
     cloud_path = f"{ISSUE_SNAPSHOTS_CLOUD_PREFIX}{filename}"   # root-level in bucket
     local_path = os.path.join(ISSUE_SNAPSHOTS_DIR, filename)
     data = storage.load_binary(cloud_path, local_path)
@@ -34,7 +35,7 @@ def load_snapshots() -> list:
     return result
 
 
-def load_latest_snapshot() -> pd.DataFrame | None:
+def load_latest_snapshot() -> Optional[pd.DataFrame]:
     files = list_snapshot_files()
     if not files:
         return None
