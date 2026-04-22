@@ -32,10 +32,6 @@ def render():
     snap_date = str(latest["Snapshot_Date"].iloc[0])[:19] if "Snapshot_Date" in latest.columns else "—"
     st.caption(f"Data source: **{snap_id}** | Generated: {snap_date} | {len(snapshots)} snapshot(s) loaded")
 
-    with st.expander("🔧 Debug: snapshot severity rows", expanded=False):
-        sev_rows = latest[latest["Metric_Group"].isin(["Open_Severity", "Reopen_Severity"])]
-        st.dataframe(sev_rows[["Metric_Group", "Metric_Name", "Metric_Count"]], hide_index=True)
-
     kpis = metrics.compute_kpis(latest)
 
     # ── KPI ─────────────────────────────────────────────────────────

@@ -52,8 +52,7 @@ def render():
             with st.spinner("Generating snapshot..."):
                 result = it_processor.process_and_save(it_file)
             if result["success"]:
-                sev_info = f"  \nSeverity values stored: `{result.get('severity_vals', [])}`"
-                st.success(result["message"] + " Dashboard updated." + sev_info)
+                st.success(result["message"] + " Dashboard updated.")
                 st.rerun()
             else:
                 st.error(result["message"])
