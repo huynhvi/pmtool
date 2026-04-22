@@ -122,13 +122,22 @@ def process_and_save(uploaded_file) -> dict:
     if type_col:
         df[type_col] = _normalize(df[type_col], _TYPE_NORM)
 
+    # Skip rows that only have an Issue ID and nothing else (pre-formatted placeholder rows).
+    # A valid record must have data in at least one column other than the Issue ID.
+    if id_col:
+        non_id_cols = [c for c in df.columns if c != id_col]
+        if non_id_cols:
+            _blank = lambda s: s.astype(str).str.strip().str.lower().isin({"", "nan"})
+            has_other_data = ~df[non_id_cols].apply(_blank).all(axis=1)
+            df = df[has_other_data].reset_index(drop=True)
+
     # Filter to actual issue records only (v3 input-agnostic requirement).
     # Remove rows where Status is blank/empty — those are pre-formatted placeholder rows.
     # Any row with a non-empty Status value (even if unrecognized) counts as a real record.
     _empty = {"Nan", "nan", "NaN", ""}
     df = df[~df[status_col].isin(_empty)].reset_index(drop=True)
 
-    # Secondary: if an Issue ID column exists, also require a non-empty ID.
+    # Also require a non-empty ID when the ID column is present.
     if id_col:
         valid_id = df[id_col].astype(str).str.strip().str.lower().ne("nan") & \
                    df[id_col].astype(str).str.strip().ne("")
