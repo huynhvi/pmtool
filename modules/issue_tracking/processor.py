@@ -175,12 +175,11 @@ def process_and_save(uploaded_file) -> dict:
     if severity_col:
         open_df   = df[df[status_col] == "Open"]
         reopen_df = df[df[status_col] == "Reopen"]
-        _base_sevs = ["High", "Medium", "Low"]
-        _extra_sevs = sorted(
+        _all_sevs = sorted(
             v for v in df[severity_col].unique()
-            if str(v).strip() not in ("", "nan", "Nan") and v not in _base_sevs
+            if str(v).strip() not in ("", "nan", "Nan")
         )
-        for sev in _base_sevs + _extra_sevs:
+        for sev in _all_sevs:
             add_row("Open_Severity",   "Severity", sev, int((open_df[severity_col]   == sev).sum()))
             add_row("Reopen_Severity", "Severity", sev, int((reopen_df[severity_col] == sev).sum()))
 
