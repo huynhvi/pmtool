@@ -11,13 +11,16 @@ _STATUS_NORM = {
     "To Confirm": "To Confirm", "Toconfirm": "To Confirm",
 }
 _SEVERITY_NORM = {
-    "High": "High", "Critical": "High", "Major": "High",
-    "P1": "High", "1": "High",
-    "Medium": "Medium", "Med": "Medium", "Moderate": "Medium", "Normal": "Medium",
-    "P2": "Medium", "2": "Medium",
-    "Low": "Low", "Minor": "Low", "Trivial": "Low",
-    "P3": "Low", "3": "Low",
-    # Blocker is intentionally kept as-is — counted as its own severity category
+    "P1-Blocker": "P1-Blocker",
+    "Blocker": "P1-Blocker", "Critical": "P1-Blocker", "Major": "P1-Blocker",
+    "P1": "P1-Blocker", "1": "P1-Blocker",
+    "P2-High": "P2-High",
+    "High": "P2-High",
+    "P2": "P2-High", "2": "P2-High",
+    "P3-Medium": "P3-Medium",
+    "Medium": "P3-Medium", "Med": "P3-Medium", "Moderate": "P3-Medium", "Normal": "P3-Medium",
+    "Low": "P3-Medium", "Minor": "P3-Medium", "Trivial": "P3-Medium",
+    "P3": "P3-Medium", "3": "P3-Medium",
 }
 _TYPE_NORM = {
     "Bug": "Bug",
