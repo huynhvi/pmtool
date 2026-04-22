@@ -231,8 +231,11 @@ def process_and_save(uploaded_file) -> dict:
     except Exception as e:
         return {"success": False, "message": f"Snapshot generated but failed to save: {e}"}
 
+    _sev_vals = sorted(df[severity_col].unique()) if severity_col else []
+
     return {
-        "success":     True,
-        "message":     f"Snapshot {snapshot_id} generated with {total} issues.{_unrecognized_warning}",
-        "snapshot_id": snapshot_id,
+        "success":      True,
+        "message":      f"Snapshot {snapshot_id} generated with {total} issues.{_unrecognized_warning}",
+        "snapshot_id":  snapshot_id,
+        "severity_vals": _sev_vals,
     }
