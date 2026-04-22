@@ -1,11 +1,9 @@
 import streamlit as st
 from modules.goal_setting import processor as gs_processor
 from modules.issue_tracking import processor as it_processor
-from config import GOAL_SETTING_DATA, ISSUE_TRACKING_DATA
+from config import GOAL_SETTING_DATA, ISSUE_SNAPSHOTS_DIR, ISSUE_SNAPSHOTS_CLOUD_PREFIX
 from utils.ui_helpers import render_section_header
 from utils import storage
-
-_CONFIDENCE_ICON = {"high": "✅", "medium": "⚠️", "low": "❌", "none": "❌"}
 
 
 def render():
@@ -34,25 +32,27 @@ def render():
 
     # ── Issue Tracking ───────────────────────────────────────────────
     st.subheader("Issue Tracking Data")
-    st.caption(storage.file_info("issue_tracking_processed.json", ISSUE_TRACKING_DATA))
+    mode = "☁ Cloud (Supabase)" if storage._use_cloud() else "💾 Local"
+    st.caption(f"{mode} | {storage.snapshot_info(ISSUE_SNAPSHOTS_CLOUD_PREFIX, ISSUE_SNAPSHOTS_DIR)}")
+    with st.expander("🔧 Debug: snapshot storage", expanded=False):
+        files = storage.list_files(ISSUE_SNAPSHOTS_CLOUD_PREFIX, ISSUE_SNAPSHOTS_DIR)
+        st.write(f"**Files found:** {files}")
+        if storage._use_cloud():
+            try:
+                raw = storage._supabase().storage.from_(storage.BUCKET).list("")
+                st.write(f"**Raw bucket listing:** {raw}")
+            except Exception as e:
+                st.write(f"**Listing error:** {e}")
 
     it_file = st.file_uploader(
         "Upload Raw Issue Tracking Excel (.xlsx)", type=["xlsx"], key="admin_it_upload"
     )
     if it_file is not None:
         if st.button("Process & Save — Issue Tracking", type="primary", key="admin_it_btn"):
-            with st.spinner("Analyzing file structure with AI..."):
+            with st.spinner("Generating snapshot..."):
                 result = it_processor.process_and_save(it_file)
             if result["success"]:
                 st.success(result["message"] + " Dashboard updated.")
-                mapping = result.get("mapping", {})
-                if mapping:
-                    st.caption("AI Column Mapping Result:")
-                    cols = st.columns(len(mapping))
-                    for i, (field, m) in enumerate(mapping.items()):
-                        icon = _CONFIDENCE_ICON.get(m.get("confidence", "none"), "❌")
-                        detected = m.get("column") or "—"
-                        cols[i].metric(field, detected, icon)
                 st.rerun()
             else:
                 st.error(result["message"])
