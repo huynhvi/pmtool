@@ -11,9 +11,13 @@ _STATUS_NORM = {
     "To Confirm": "To Confirm", "Toconfirm": "To Confirm",
 }
 _SEVERITY_NORM = {
-    "High": "High",
-    "Medium": "Medium", "Med": "Medium",
-    "Low": "Low",
+    "High": "High", "Critical": "High", "Major": "High",
+    "P1": "High", "1": "High",
+    "Medium": "Medium", "Med": "Medium", "Moderate": "Medium", "Normal": "Medium",
+    "P2": "Medium", "2": "Medium",
+    "Low": "Low", "Minor": "Low", "Trivial": "Low",
+    "P3": "Low", "3": "Low",
+    # Blocker is intentionally kept as-is — counted as its own severity category
 }
 _TYPE_NORM = {
     "Bug": "Bug",
@@ -21,9 +25,12 @@ _TYPE_NORM = {
     "Improvement": "Improvement", "Improve": "Improvement",
 }
 
-_STATUS_CANDIDATES   = ["Status", "status", "STATUS", "Trạng thái", "Issue Status"]
-_SEVERITY_CANDIDATES = ["Severity", "severity", "SEVERITY", "Mức độ", "Priority"]
-_TYPE_CANDIDATES     = ["Type", "type", "TYPE", "Issue Type", "IssueType", "Category"]
+_STATUS_CANDIDATES   = ["Status", "status", "STATUS", "Trạng thái", "Issue Status", "Tình trạng"]
+_SEVERITY_CANDIDATES = ["Severity", "severity", "SEVERITY", "Mức độ", "Priority", "priority", "Urgency"]
+_TYPE_CANDIDATES     = ["Type", "type", "TYPE", "Issue Type", "IssueType", "Category", "Loại", "Loại lỗi"]
+_ID_CANDIDATES       = ["Issue ID", "ID", "No.", "No", "#", "Issue No", "IssueID", "Số", "STT", "issue_id"]
+
+_VALID_STATUSES = {"Open", "Reopen", "Closed", "To Confirm"}
 
 _HEADER_KEYWORDS = {"status", "severity", "type", "issue", "id", "priority", "date", "trạng", "loại", "no.", "no"}
 
@@ -73,16 +80,72 @@ def process_and_save(uploaded_file) -> dict:
     status_col   = _find_col(df, _STATUS_CANDIDATES)
     severity_col = _find_col(df, _SEVERITY_CANDIDATES)
     type_col     = _find_col(df, _TYPE_CANDIDATES)
+    id_col       = _find_col(df, _ID_CANDIDATES)
 
     if status_col is None:
         found = list(df.columns)
-        return {"success": False, "message": f"Cannot find Status column in IssuesLog sheet. Columns found: {found}"}
+        return {"success": False, "message": f"Required business field 'Status' not found in IssuesLog sheet. Columns detected: {found}"}
+
+    # Capture raw values before normalization for diagnostics
+    _raw_status_vals = sorted({str(v).strip() for v in df[status_col].tolist()
+                                if str(v).strip() not in ("", "nan")})[:30]
+
+    # If the primary Status column is blank, scan all columns for one containing
+    # recognizable status values (handles two-section layouts with duplicate headers).
+    if not _raw_status_vals:
+        _known_keys = {k.lower() for k in _STATUS_NORM}
+        for _col in df.columns:
+            _vals = {str(v).strip() for v in df[_col].tolist() if str(v).strip() not in ("", "nan")}
+            if _vals and any(v.lower() in _known_keys or v.title() in _STATUS_NORM for v in _vals):
+                status_col = _col
+                _raw_status_vals = sorted(_vals)[:30]
+                break
+
+    # Same fallback scan for severity — handles duplicate headers in two-section layouts
+    if severity_col:
+        _raw_sev_vals = {str(v).strip() for v in df[severity_col].tolist()
+                         if str(v).strip() not in ("", "nan")}
+        if not _raw_sev_vals:
+            _sev_keys = {k.lower() for k in _SEVERITY_NORM}
+            for _col in df.columns:
+                _vals = {str(v).strip() for v in df[_col].tolist() if str(v).strip() not in ("", "nan")}
+                if _vals and any(v.lower() in _sev_keys or v.title() in _SEVERITY_NORM for v in _vals):
+                    severity_col = _col
+                    break
 
     df[status_col] = _normalize(df[status_col], _STATUS_NORM)
     if severity_col:
         df[severity_col] = _normalize(df[severity_col], _SEVERITY_NORM)
     if type_col:
         df[type_col] = _normalize(df[type_col], _TYPE_NORM)
+
+    # Filter to actual issue records only (v3 input-agnostic requirement).
+    # Remove rows where Status is blank/empty — those are pre-formatted placeholder rows.
+    # Any row with a non-empty Status value (even if unrecognized) counts as a real record.
+    _empty = {"Nan", "nan", "NaN", ""}
+    df = df[~df[status_col].isin(_empty)].reset_index(drop=True)
+
+    # Secondary: if an Issue ID column exists, also require a non-empty ID.
+    if id_col:
+        valid_id = df[id_col].astype(str).str.strip().str.lower().ne("nan") & \
+                   df[id_col].astype(str).str.strip().ne("")
+        df = df[valid_id].reset_index(drop=True)
+
+    if len(df) == 0:
+        return {
+            "success": False,
+            "message": (
+                f"No actual issue records found. "
+                f"Header detected at row {header_row}. "
+                f"Status column: '{status_col}'. "
+                f"Raw Status values found in file: {_raw_status_vals}. "
+                f"These must normalize to: Open / Reopen / Closed / To Confirm."
+            )
+        }
+
+    # Warn about unrecognized status values (they will count in Total but not in any category)
+    unrecognized = set(df[status_col].unique()) - _VALID_STATUSES
+    _unrecognized_warning = f" Note: unrecognized status values will not appear in any category: {sorted(unrecognized)}" if unrecognized else ""
 
     now = datetime.datetime.now()
     snapshot_id   = now.strftime("Rawdata_%Y%m%d_%H%M%S")
@@ -112,7 +175,12 @@ def process_and_save(uploaded_file) -> dict:
     if severity_col:
         open_df   = df[df[status_col] == "Open"]
         reopen_df = df[df[status_col] == "Reopen"]
-        for sev in ["High", "Medium", "Low"]:
+        _base_sevs = ["High", "Medium", "Low"]
+        _extra_sevs = sorted(
+            v for v in df[severity_col].unique()
+            if str(v).strip() not in ("", "nan", "Nan") and v not in _base_sevs
+        )
+        for sev in _base_sevs + _extra_sevs:
             add_row("Open_Severity",   "Severity", sev, int((open_df[severity_col]   == sev).sum()))
             add_row("Reopen_Severity", "Severity", sev, int((reopen_df[severity_col] == sev).sum()))
 
@@ -163,6 +231,6 @@ def process_and_save(uploaded_file) -> dict:
 
     return {
         "success":     True,
-        "message":     f"Snapshot {snapshot_id} generated with {total} issues.",
+        "message":     f"Snapshot {snapshot_id} generated with {total} issues.{_unrecognized_warning}",
         "snapshot_id": snapshot_id,
     }
