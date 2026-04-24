@@ -13,7 +13,9 @@ STATUS_COLORS = {
 
 _CSS = """
 <style>
-.block-container { padding-top: 1.25rem !important; padding-bottom: 2rem !important; }
+.block-container { padding-top: 4rem !important; padding-bottom: 2rem !important; }
+[data-testid="stMainBlockContainer"] { overflow: visible !important; }
+[data-testid="stHtml"] { width: 100% !important; overflow: visible !important; }
 #MainMenu { visibility: hidden; }
 footer    { visibility: hidden; }
 
