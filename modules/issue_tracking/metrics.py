@@ -14,12 +14,14 @@ def compute_kpis(df: pd.DataFrame) -> dict:
     reopen_cnt, _ = _get(df, "Status", "Reopen")
     closed_cnt, _ = _get(df, "Status", "Closed")
     toconf_cnt, _ = _get(df, "Status", "To Confirm")
+    passed_cnt, _ = _get(df, "Status", "Passed")
     return {
         "total":      total,
         "open":       open_cnt,
         "reopen":     reopen_cnt,
         "closed":     closed_cnt,
         "to_confirm": toconf_cnt,
+        "passed":     passed_cnt,
     }
 
 
@@ -62,6 +64,7 @@ def compute_trend(snapshots: list) -> tuple:
         reopen_cnt, _ = _get(snap_df, "Status", "Reopen")
         closed_cnt, _ = _get(snap_df, "Status", "Closed")
         toconf_cnt, _ = _get(snap_df, "Status", "To Confirm")
+        passed_cnt, _ = _get(snap_df, "Status", "Passed")
         rows.append({
             "Snapshot":   snap_id,
             "Date":       snap_date,
@@ -70,6 +73,7 @@ def compute_trend(snapshots: list) -> tuple:
             "Reopen":     reopen_cnt,
             "Closed":     closed_cnt,
             "To Confirm": toconf_cnt,
+            "Passed":     passed_cnt,
         })
 
     trend_df = pd.DataFrame(rows)
@@ -87,6 +91,7 @@ def compute_trend(snapshots: list) -> tuple:
             "reopen":     pct(cur["Reopen"],     prev["Reopen"]),
             "closed":     pct(cur["Closed"],     prev["Closed"]),
             "to_confirm": pct(cur["To Confirm"], prev["To Confirm"]),
+            "passed":     pct(cur["Passed"],     prev["Passed"]),
         }
 
     return trend_df, pct_changes
@@ -96,6 +101,7 @@ def compute_evaluation(pct_changes: dict) -> list:
     open_pct   = pct_changes.get("open",   0) or 0
     reopen_pct = pct_changes.get("reopen", 0) or 0
     closed_pct = pct_changes.get("closed", 0) or 0
+    passed_pct = pct_changes.get("passed", 0) or 0
 
     evaluations = []
 
@@ -119,6 +125,13 @@ def compute_evaluation(pct_changes: dict) -> list:
     elif closed_pct < 0:
         evaluations.append({"level": "warning",
             "message": f"Closed issues decreased by {abs(closed_pct):.2f}% compared to the previous snapshot — resolution rate may be slowing."})
+
+    if passed_pct > 0:
+        evaluations.append({"level": "success",
+            "message": f"Passed issues increased by {abs(passed_pct):.2f}% compared to the previous snapshot, indicating more issues have been verified and accepted."})
+    elif passed_pct < 0:
+        evaluations.append({"level": "warning",
+            "message": f"Passed issues decreased by {abs(passed_pct):.2f}% compared to the previous snapshot — fewer issues are being confirmed as resolved."})
 
     if not evaluations:
         evaluations.append({"level": "warning",

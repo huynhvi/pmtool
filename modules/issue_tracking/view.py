@@ -42,6 +42,7 @@ def render():
         {"label": "Reopen",       "value": kpis["reopen"],     "color": "yellow"},
         {"label": "Closed",       "value": kpis["closed"],     "color": "green"},
         {"label": "To Confirm",   "value": kpis["to_confirm"], "color": "yellow"},
+        {"label": "Passed",       "value": kpis["passed"],     "color": "blue"},
     ])
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
@@ -107,7 +108,7 @@ def render():
     trend_df, pct_changes = metrics.compute_trend(snapshots)
 
     trend_fig = px.line(
-        trend_df, x="Date", y=["Total", "Open", "Reopen", "Closed", "To Confirm"],
+        trend_df, x="Date", y=["Total", "Open", "Reopen", "Closed", "To Confirm", "Passed"],
         markers=True,
     )
     st.plotly_chart(make_chart_fig(trend_fig, "Issue Count Trend"), use_container_width=True)
@@ -115,13 +116,14 @@ def render():
     st.dataframe(trend_df, use_container_width=True, hide_index=True)
 
     st.subheader("Change vs Previous Snapshot")
-    cols = st.columns(5)
+    cols = st.columns(6)
     labels = [
         ("Total",      "total"),
         ("Open",       "open"),
         ("Reopen",     "reopen"),
         ("Closed",     "closed"),
         ("To Confirm", "to_confirm"),
+        ("Passed",     "passed"),
     ]
     for col, (label, key) in zip(cols, labels):
         pct = pct_changes.get(key, 0) or 0

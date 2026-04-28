@@ -9,6 +9,7 @@ _STATUS_NORM = {
     "Open": "Open", "Re-Open": "Reopen", "Reopen": "Reopen",
     "Closed": "Closed", "Close": "Closed",
     "To Confirm": "To Confirm", "Toconfirm": "To Confirm",
+    "Passed": "Passed",
 }
 _SEVERITY_NORM = {
     "P1-Blocker": "P1-Blocker",
@@ -33,7 +34,7 @@ _SEVERITY_CANDIDATES = ["Severity", "severity", "SEVERITY", "Mức độ", "Prio
 _TYPE_CANDIDATES     = ["Type", "type", "TYPE", "Issue Type", "IssueType", "Category", "Loại", "Loại lỗi"]
 _ID_CANDIDATES       = ["Issue ID", "ID", "No.", "No", "#", "Issue No", "IssueID", "Số", "STT", "issue_id"]
 
-_VALID_STATUSES = {"Open", "Reopen", "Closed", "To Confirm"}
+_VALID_STATUSES = {"Open", "Reopen", "Closed", "To Confirm", "Passed"}
 
 _HEADER_KEYWORDS = {"status", "severity", "type", "issue", "id", "priority", "date", "trạng", "loại", "no.", "no"}
 
@@ -151,7 +152,7 @@ def process_and_save(uploaded_file) -> dict:
                 f"Header detected at row {header_row}. "
                 f"Status column: '{status_col}'. "
                 f"Raw Status values found in file: {_raw_status_vals}. "
-                f"These must normalize to: Open / Reopen / Closed / To Confirm."
+                f"These must normalize to: Open / Reopen / Closed / To Confirm / Passed."
             )
         }
 
@@ -181,7 +182,7 @@ def process_and_save(uploaded_file) -> dict:
 
     add_row("Total_Issues",    "",         "Total Issues", total)
 
-    for status in ["Open", "Reopen", "Closed", "To Confirm"]:
+    for status in ["Open", "Reopen", "Closed", "To Confirm", "Passed"]:
         add_row("Status", "Status", status, int((df[status_col] == status).sum()))
 
     if severity_col:

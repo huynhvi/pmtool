@@ -3,7 +3,7 @@ import pandas as pd
 
 STATUS_COLORS = {
     "Open": "#DC2626", "Reopen": "#EA580C", "Closed": "#16A34A",
-    "To Confirm": "#D97706",
+    "To Confirm": "#D97706", "Passed": "#2563EB",
     "High": "#DC2626", "Medium": "#D97706", "Low": "#16A34A",
     "Completed": "#16A34A", "In Progress": "#D97706", "Not Started": "#9CA3AF",
     "E_APPROVED": "#16A34A", "E_COMPLETED": "#16A34A", "E_WAITING_HANDLING": "#9CA3AF",
@@ -42,6 +42,7 @@ footer    { visibility: hidden; }
 .pm-kpi-yellow { --card-accent: #D97706; --card-bg: #FFFBEB; }
 .pm-kpi-red    { --card-accent: #DC2626; --card-bg: #FEF2F2; }
 .pm-kpi-gray   { --card-accent: #6B7280; --card-bg: #F9FAFB; }
+.pm-kpi-blue   { --card-accent: #2563EB; --card-bg: #EFF6FF; }
 
 .pm-section-header {
     font-size: 0.78rem; font-weight: 700; letter-spacing: .08em;
