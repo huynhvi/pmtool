@@ -25,3 +25,5 @@ GOAL_SETTING_DATA          = os.path.join(DATA_DIR, "goal_setting_processed.json
 ISSUE_TRACKING_DATA        = os.path.join(DATA_DIR, "issue_tracking_processed.json")
 ISSUE_SNAPSHOTS_DIR         = os.path.join(DATA_DIR, "issue_snapshots")
 ISSUE_SNAPSHOTS_CLOUD_PREFIX = "snapshot_"   # root-level prefix in Supabase bucket
+
+DEPARTMENT_DATA = os.path.join(os.path.dirname(__file__), "Dashboard", "Department", "vngg_department_updated 28Apr26.xlsx")

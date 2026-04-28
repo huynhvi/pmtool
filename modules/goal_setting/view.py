@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from . import loader, metrics
+from . import loader, metrics, dept_loader
 from utils.ui_helpers import (
     render_kpi_cards, render_section_header, make_chart_fig,
     style_completion_table, STATUS_COLORS,
@@ -17,25 +17,49 @@ _STATUS_LABEL_MAP = {
 _STATUS_LABEL_MAP_INV = {v: k for k, v in _STATUS_LABEL_MAP.items()}
 
 
+def render_sidebar():
+    """Render Goal Setting sidebar filters. Must be called OUTSIDE any tab context."""
+    df = loader.load_goal_data()
+    if df is None:
+        return
+
+    goal_depts = sorted(df["Phòng ban"].unique().tolist())
+    approver_options = sorted(df["Người duyệt"].unique().tolist())
+    raw_statuses = sorted(df["Trạng thái"].unique().tolist())
+    status_display_options = [_STATUS_LABEL_MAP.get(s, s) for s in raw_statuses]
+
+    _dept_df = dept_loader.load_department_df()
+    _filter_options, _, _ = dept_loader.build_filter_options(_dept_df, goal_depts)
+
+    with st.sidebar:
+        st.header("Goal Setting Filters")
+        st.multiselect("Department", _filter_options, key="gs_dept")
+        st.multiselect("Approver", approver_options, key="gs_approver")
+        st.multiselect("Status", status_display_options, key="gs_status")
+
+
 def render():
     df = loader.load_goal_data()
     if df is None:
         st.info("No data available yet. Ask your Admin to upload and process the Goal Setting file.")
         return
 
-    dept_options = sorted(df["Phòng ban"].unique().tolist())
-    approver_options = sorted(df["Người duyệt"].unique().tolist())
-    raw_statuses = sorted(df["Trạng thái"].unique().tolist())
-    status_display_options = [_STATUS_LABEL_MAP.get(s, s) for s in raw_statuses]
+    goal_depts = sorted(df["Phòng ban"].unique().tolist())
+    _dept_df = dept_loader.load_department_df()
+    _filter_options, _display_to_name, _children_by_name = dept_loader.build_filter_options(
+        _dept_df, goal_depts
+    )
+    _dept_name_to_group = dept_loader.build_dept_name_to_group(_dept_df)
 
-    with st.sidebar:
-        st.header("Goal Setting Filters")
-        dept = st.multiselect("Department", dept_options, key="gs_dept")
-        approver = st.multiselect("Approver", approver_options, key="gs_approver")
-        status_labels = st.multiselect("Status", status_display_options, key="gs_status")
+    dept_labels  = st.session_state.get("gs_dept", [])
+    approver     = st.session_state.get("gs_approver", [])
+    status_labels = st.session_state.get("gs_status", [])
+
+    selected_dept_names = [_display_to_name.get(l, l) for l in dept_labels]
+    expanded_depts = sorted(dept_loader.get_all_descendant_names(selected_dept_names, _children_by_name))
 
     status_raw = [_STATUS_LABEL_MAP_INV.get(s, s) for s in status_labels]
-    df = metrics.apply_filters(df, dept, approver, status_raw)
+    df = metrics.apply_filters(df, expanded_depts, approver, status_raw)
     kpis = metrics.compute_kpis(df)
 
     # ── TOP: KPI cards ──────────────────────────────────────────────
@@ -100,6 +124,92 @@ def render():
             {"col": "Completion%", "op": "lt", "threshold": LOW_COMPLETION_THRESHOLD, "color": "#FEF2F2"},
         ]).format({"Completion%": "{:.2f}%"})
         st.dataframe(styled_approver, use_container_width=True, hide_index=True)
+
+    st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
+
+    render_section_header("Dept Group Comparison")
+    dg_comp_df = metrics.compute_dept_group_comparison(df, _dept_name_to_group)
+
+    col_dg_bar, col_dg_stack = st.columns(2)
+
+    with col_dg_bar:
+        dg_sorted = dg_comp_df.sort_values("Completion%", ascending=True)
+        dg_bar = px.bar(
+            dg_sorted,
+            x="Completion%", y="Department Group", orientation="h",
+            color_discrete_sequence=["#8B5CF6"],
+            text=dg_sorted.apply(
+                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.1f}%)", axis=1
+            ),
+        )
+        dg_bar = make_chart_fig(dg_bar, "Completion % by Dept Group")
+        dg_bar.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %")
+        st.plotly_chart(dg_bar, use_container_width=True)
+
+    with col_dg_stack:
+        dg_base = dg_comp_df.sort_values("Completion%", ascending=True)
+        dg_stacked = dg_base.melt(
+            id_vars=["Department Group", "Total"],
+            value_vars=["Completed", "In Progress", "Not Started"],
+            var_name="Status", value_name="Count",
+        )
+        dg_stacked["label"] = dg_stacked.apply(
+            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.1f}%)" if r["Count"] > 0 else "",
+            axis=1,
+        )
+        dg_stacked_fig = px.bar(
+            dg_stacked,
+            x="Count", y="Department Group", orientation="h",
+            color="Status", color_discrete_map=STATUS_COLORS,
+            barmode="stack", text="label",
+        )
+        dg_stacked_fig.update_traces(textposition="inside", insidetextanchor="middle")
+        dg_stacked_fig = make_chart_fig(dg_stacked_fig, "Status Breakdown by Dept Group")
+        dg_stacked_fig.update_layout(yaxis_title="", xaxis_title="Count")
+        st.plotly_chart(dg_stacked_fig, use_container_width=True)
+
+    st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
+
+    render_section_header("Department Detail Comparison")
+    dept_comp_df = metrics.compute_department_comparison(df)
+
+    col_comp_bar, col_comp_stack = st.columns(2)
+
+    with col_comp_bar:
+        comp_sorted = dept_comp_df.sort_values("Completion%", ascending=True)
+        bar_comp = px.bar(
+            comp_sorted,
+            x="Completion%", y="Department", orientation="h",
+            color_discrete_sequence=["#3B82F6"],
+            text=comp_sorted.apply(
+                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.1f}%)", axis=1
+            ),
+        )
+        bar_comp = make_chart_fig(bar_comp, "Completion % by Department")
+        bar_comp.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %")
+        st.plotly_chart(bar_comp, use_container_width=True)
+
+    with col_comp_stack:
+        comp_base = dept_comp_df.sort_values("Completion%", ascending=True)
+        stacked_df = comp_base.melt(
+            id_vars=["Department", "Total"],
+            value_vars=["Completed", "In Progress", "Not Started"],
+            var_name="Status", value_name="Count",
+        )
+        stacked_df["label"] = stacked_df.apply(
+            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.1f}%)" if r["Count"] > 0 else "",
+            axis=1,
+        )
+        stacked_fig = px.bar(
+            stacked_df,
+            x="Count", y="Department", orientation="h",
+            color="Status", color_discrete_map=STATUS_COLORS,
+            barmode="stack", text="label",
+        )
+        stacked_fig.update_traces(textposition="inside", insidetextanchor="middle")
+        stacked_fig = make_chart_fig(stacked_fig, "Status Breakdown by Department")
+        stacked_fig.update_layout(yaxis_title="", xaxis_title="Count")
+        st.plotly_chart(stacked_fig, use_container_width=True)
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
 

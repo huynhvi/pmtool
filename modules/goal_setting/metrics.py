@@ -56,6 +56,52 @@ def compute_approver_workload(df: pd.DataFrame) -> pd.DataFrame:
     return result[["Approver", "Total", "Pending", "Completion%"]].sort_values("Completion%", ascending=False).reset_index(drop=True)
 
 
+def compute_department_comparison(df: pd.DataFrame) -> pd.DataFrame:
+    total = df.groupby("Phòng ban").size().rename("Total")
+    completed = (
+        df[df["Trạng thái"].isin(COMPLETED_STATUSES)]
+        .groupby("Phòng ban").size().rename("Completed")
+    )
+    not_started = (
+        df[df["Trạng thái"] == NOT_STARTED_STATUS]
+        .groupby("Phòng ban").size().rename("Not Started")
+    )
+    result = pd.concat([total, completed, not_started], axis=1).fillna(0).reset_index()
+    result.columns = ["Department", "Total", "Completed", "Not Started"]
+    result["Completed"] = result["Completed"].astype(int)
+    result["Not Started"] = result["Not Started"].astype(int)
+    result["In Progress"] = result["Total"] - result["Completed"] - result["Not Started"]
+    result["Completion%"] = (result["Completed"] / result["Total"] * 100).round(2)
+    return result.sort_values("Completion%", ascending=False).reset_index(drop=True)
+
+
+def compute_dept_group_comparison(df: pd.DataFrame, dept_name_to_group: dict) -> pd.DataFrame:
+    COLS = ["Department Group", "Total", "Completed", "Not Started", "In Progress", "Completion%"]
+    if not dept_name_to_group:
+        return pd.DataFrame(columns=COLS)
+    tmp = df.copy()
+    tmp["Dept_Group"] = tmp["Phòng ban"].map(dept_name_to_group)
+    tmp = tmp.dropna(subset=["Dept_Group"])
+    if tmp.empty:
+        return pd.DataFrame(columns=COLS)
+    total = tmp.groupby("Dept_Group").size().rename("Total")
+    completed = (
+        tmp[tmp["Trạng thái"].isin(COMPLETED_STATUSES)]
+        .groupby("Dept_Group").size().rename("Completed")
+    )
+    not_started = (
+        tmp[tmp["Trạng thái"] == NOT_STARTED_STATUS]
+        .groupby("Dept_Group").size().rename("Not Started")
+    )
+    result = pd.concat([total, completed, not_started], axis=1).fillna(0).reset_index()
+    result.columns = ["Department Group", "Total", "Completed", "Not Started"]
+    result["Completed"] = result["Completed"].astype(int)
+    result["Not Started"] = result["Not Started"].astype(int)
+    result["In Progress"] = result["Total"] - result["Completed"] - result["Not Started"]
+    result["Completion%"] = (result["Completed"] / result["Total"] * 100).round(2)
+    return result.sort_values("Completion%", ascending=False).reset_index(drop=True)
+
+
 def get_followup_list(df: pd.DataFrame) -> pd.DataFrame:
     return (
         df[df["Trạng thái"] == NOT_STARTED_STATUS][["Nhân viên", "Phòng ban", "Người duyệt"]]
