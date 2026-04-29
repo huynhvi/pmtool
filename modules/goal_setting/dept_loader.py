@@ -3,11 +3,27 @@ from functools import lru_cache
 from config import DEPARTMENT_DATA
 
 
+_SHEET_NAME = "Updated via PM Tool 28Ap26"
+_PT_COL     = "PM Tool-Deaprtment List - 28Apr26"
+
+
 @lru_cache(maxsize=1)
 def load_department_df() -> pd.DataFrame:
     try:
-        df = pd.read_excel(DEPARTMENT_DATA)
+        df = pd.read_excel(DEPARTMENT_DATA, sheet_name=_SHEET_NAME)
+        df.columns = [c.strip() for c in df.columns]
+        # Replace name with PM Tool label where it is non-null and non-blank —
+        # goal data uses PM Tool names, not internal names.
+        if _PT_COL in df.columns:
+            mask = df[_PT_COL].notna() & (df[_PT_COL].astype(str).str.strip() != "") \
+                   & (df[_PT_COL].astype(str).str.strip() != "nan")
+            df.loc[mask, "name"] = df.loc[mask, _PT_COL].astype(str).str.strip()
+            df = df.drop(columns=[_PT_COL])
         df.columns = [c.strip().lower() for c in df.columns]
+        # Drop rows with blank/unnamed code or name
+        df = df[df["code"].astype(str).str.strip().ne("") &
+                df["name"].astype(str).str.strip().ne("nan") &
+                df["name"].astype(str).str.strip().ne("")]
         return df.dropna(subset=["code", "name"]).reset_index(drop=True)
     except Exception:
         return pd.DataFrame(columns=["code", "name", "type", "parent_code", "manager"])

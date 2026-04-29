@@ -20,7 +20,7 @@ if not st.session_state.get("authenticated"):
 
 with st.sidebar:
     auth.render_logout_button()
-    st.caption("build: v2.1 — 2026-04-22")
+    st.caption("build: v2.2 — 2026-04-29")
 
 goal_view.render_sidebar()
 
