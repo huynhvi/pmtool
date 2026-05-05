@@ -24,7 +24,7 @@ def render_sidebar():
         return
 
     goal_depts = sorted(df["Phòng ban"].unique().tolist())
-    approver_options = sorted(df["Người duyệt"].unique().tolist())
+    approver_options = sorted(df["Người duyệt"].dropna().unique().tolist())
     raw_statuses = sorted(df["Trạng thái"].unique().tolist())
     status_display_options = [_STATUS_LABEL_MAP.get(s, s) for s in raw_statuses]
 
