@@ -23,9 +23,9 @@ def render_sidebar():
     if df is None:
         return
 
-    goal_depts = sorted(df["Phòng ban"].unique().tolist())
+    goal_depts = sorted(df["Phòng ban"].dropna().unique().tolist())
     approver_options = sorted(df["Người duyệt"].dropna().unique().tolist())
-    raw_statuses = sorted(df["Trạng thái"].unique().tolist())
+    raw_statuses = sorted(df["Trạng thái"].dropna().unique().tolist())
     status_display_options = [_STATUS_LABEL_MAP.get(s, s) for s in raw_statuses]
 
     _dept_df = dept_loader.load_department_df()
@@ -44,7 +44,7 @@ def render():
         st.info("No data available yet. Ask your Admin to upload and process the Goal Setting file.")
         return
 
-    goal_depts = sorted(df["Phòng ban"].unique().tolist())
+    goal_depts = sorted(df["Phòng ban"].dropna().unique().tolist())
     _dept_df = dept_loader.load_department_df()
     _filter_options, _display_to_name, _children_by_name = dept_loader.build_filter_options(
         _dept_df, goal_depts
