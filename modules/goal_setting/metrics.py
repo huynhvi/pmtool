@@ -24,21 +24,28 @@ def compute_kpis(df: pd.DataFrame) -> dict:
     completed = len(df[df["Trạng thái"].isin(COMPLETED_STATUSES)])
     in_progress = total - completed - not_started
     completion_rate = completed / total if total > 0 else 0.0
+    _pct = lambda n: round(n / total * 100, 2) if total > 0 else 0.0
     return {
         "total": total,
         "completed": completed,
         "not_started": not_started,
         "in_progress": in_progress,
         "completion_rate": completion_rate,
+        "completed_pct":   _pct(completed),
+        "in_progress_pct": _pct(in_progress),
+        "not_started_pct": _pct(not_started),
     }
 
 
 def compute_status_distribution(df: pd.DataFrame) -> pd.DataFrame:
-    return (
+    total = len(df)
+    result = (
         df.groupby("Trạng thái", as_index=False)
         .size()
         .rename(columns={"Trạng thái": "Status", "size": "Count"})
     )
+    result["Percentage"] = (result["Count"] / total * 100).round(2) if total > 0 else 0.0
+    return result
 
 
 def compute_department_progress(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,8 +126,9 @@ def compute_dept_group_comparison(df: pd.DataFrame, dept_name_to_group: dict) ->
 
 
 def get_followup_list(df: pd.DataFrame) -> pd.DataFrame:
+    cols = [c for c in ["Nhân viên", "Phòng ban", "Trạng thái", "Người duyệt"] if c in df.columns]
     return (
-        df[df["Trạng thái"] == NOT_STARTED_STATUS][["Nhân viên", "Phòng ban", "Người duyệt"]]
+        df[~df["Trạng thái"].isin(COMPLETED_STATUSES)][cols]
         .reset_index(drop=True)
     )
 

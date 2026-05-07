@@ -65,14 +65,21 @@ def render():
     eff_df = metrics.get_effective_df(df)
     kpis = metrics.compute_kpis(eff_df)
 
+    raw_total = len(df)
+    excluded_pct = round(excluded_count / raw_total * 100, 2) if raw_total > 0 else 0.0
+
     # ── TOP: KPI cards ──────────────────────────────────────────────
     render_section_header("Summary")
     render_kpi_cards([
-        {"label": "Total Goal Sheets",      "value": kpis["total"],       "color": "gray"},
-        {"label": "Completed",              "value": kpis["completed"],   "color": "green"},
-        {"label": "In Progress",            "value": kpis["in_progress"], "color": "yellow"},
-        {"label": "Not Started",            "value": kpis["not_started"], "color": "red"},
-        {"label": "Excluded Goal Sheets",   "value": excluded_count,      "color": "gray"},
+        {"label": "Total Goal Sheets",    "value": kpis["total"],       "color": "gray"},
+        {"label": "Completed",            "value": kpis["completed"],   "color": "green",
+         "subtitle": f"{kpis['completed_pct']:.2f}% of effective total"},
+        {"label": "In Progress",          "value": kpis["in_progress"], "color": "yellow",
+         "subtitle": f"{kpis['in_progress_pct']:.2f}% of effective total"},
+        {"label": "Not Started",          "value": kpis["not_started"], "color": "red",
+         "subtitle": f"{kpis['not_started_pct']:.2f}% of effective total"},
+        {"label": "Excluded Goal Sheets", "value": excluded_count,      "color": "gray",
+         "subtitle": f"{excluded_pct:.2f}% of raw total"},
     ])
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
@@ -84,10 +91,13 @@ def render():
     with col_chart1:
         status_df = metrics.compute_status_distribution(eff_df)
         status_df["Status"] = status_df["Status"].replace(_STATUS_LABEL_MAP)
+        status_df["label"] = status_df.apply(
+            lambda r: f"{int(r['Count'])} ({r['Percentage']:.2f}%)", axis=1
+        )
         bar_fig = px.bar(
             status_df, x="Count", y="Status", orientation="h",
             color="Status", color_discrete_map=STATUS_COLORS,
-            text="Count",
+            text="label",
         )
         bar_fig = make_chart_fig(bar_fig, "Goal Sheet Status Distribution")
         bar_fig.update_layout(showlegend=False, yaxis_title="", xaxis_title="Count")
@@ -102,6 +112,7 @@ def render():
             pie_data, names="Category", values="Count", hole=0.45,
             color="Category", color_discrete_map=STATUS_COLORS,
         )
+        pie_fig.update_traces(texttemplate="%{label}<br>%{value} (%{percent:.2%})")
         pie_fig = make_chart_fig(pie_fig, "Completion Proportion")
         st.plotly_chart(pie_fig, use_container_width=True)
 
@@ -144,7 +155,7 @@ def render():
             x="Completion%", y="Department Group", orientation="h",
             color_discrete_sequence=["#8B5CF6"],
             text=dg_sorted.apply(
-                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.1f}%)", axis=1
+                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.2f}%)", axis=1
             ),
         )
         dg_bar = make_chart_fig(dg_bar, "Completion % by Dept Group")
@@ -159,7 +170,7 @@ def render():
             var_name="Status", value_name="Count",
         )
         dg_stacked["label"] = dg_stacked.apply(
-            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.1f}%)" if r["Count"] > 0 else "",
+            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.2f}%)" if r["Count"] > 0 else "",
             axis=1,
         )
         dg_stacked_fig = px.bar(
@@ -188,7 +199,7 @@ def render():
             x="Completion%", y="Department", orientation="h",
             color_discrete_sequence=["#3B82F6"],
             text=comp_sorted.apply(
-                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.1f}%)", axis=1
+                lambda r: f"{int(r['Completed'])} / {int(r['Total'])} ({r['Completion%']:.2f}%)", axis=1
             ),
         )
         bar_comp = make_chart_fig(bar_comp, "Completion % by Department")
@@ -203,7 +214,7 @@ def render():
             var_name="Status", value_name="Count",
         )
         stacked_df["label"] = stacked_df.apply(
-            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.1f}%)" if r["Count"] > 0 else "",
+            lambda r: f"{int(r['Count'])} ({r['Count'] / r['Total'] * 100:.2f}%)" if r["Count"] > 0 else "",
             axis=1,
         )
         stacked_fig = px.bar(
@@ -219,13 +230,23 @@ def render():
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
 
-    render_section_header("Follow-up Required")
-    followup_df = metrics.get_followup_list(eff_df)
+    render_section_header("Follow-up Required List")
+    followup_df = metrics.get_followup_list(eff_df).copy()
+    followup_df["Trạng thái"] = followup_df["Trạng thái"].replace(_STATUS_LABEL_MAP)
+    followup_df = followup_df.rename(columns={
+        "Nhân viên":  "Employee",
+        "Phòng ban":  "Department",
+        "Trạng thái": "Status",
+        "Người duyệt": "Approver",
+    })
     count = len(followup_df)
     if count > 0:
+        eff_total = kpis["total"]
+        followup_pct = round(count / eff_total * 100, 2) if eff_total > 0 else 0.0
         st.markdown(
             f'<span style="background:#FEF2F2;color:#DC2626;padding:.2rem .65rem;'
-            f'border-radius:999px;font-size:.8rem;font-weight:700;">⚠ {count} require follow-up</span>',
+            f'border-radius:999px;font-size:.8rem;font-weight:700;">'
+            f'⚠ {count} require follow-up ({followup_pct:.2f}% of effective total)</span>',
             unsafe_allow_html=True,
         )
     else:

@@ -35,6 +35,9 @@ footer    { visibility: hidden; }
 .pm-kpi-card .value {
     font-size: 2rem; font-weight: 700; line-height: 1; color: #111827;
 }
+.pm-kpi-card .subtitle {
+    font-size: 0.76rem; color: #6B7280; margin-top: .2rem;
+}
 .pm-kpi-card .delta {
     font-size: 0.76rem; margin-top: .35rem; font-weight: 600;
 }
@@ -80,10 +83,12 @@ def render_kpi_cards(metrics: list):
             delta_color = "#16A34A" if str(val).lstrip("+-").replace(".", "").isdigit() and float(str(val).replace("%", "")) >= 0 else "#DC2626"
             arrow = "▲" if str(val).lstrip("-").replace("%", "").replace(".", "").isdigit() and not str(val).startswith("-") else "▼"
             delta_html = f'<div class="delta" style="color:{delta_color};">{arrow} {val}</div>'
+        subtitle_html = f'<div class="subtitle">{m["subtitle"]}</div>' if m.get("subtitle") else ""
         html = (
             f'<div class="pm-kpi-card pm-kpi-{color}">'
             f'<div class="label">{m["label"]}</div>'
             f'<div class="value">{m["value"]}</div>'
+            f'{subtitle_html}'
             f'{delta_html}'
             f'</div>'
         )
