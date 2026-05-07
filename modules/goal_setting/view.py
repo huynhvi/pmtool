@@ -11,6 +11,7 @@ from config import LOW_COMPLETION_THRESHOLD
 _STATUS_LABEL_MAP = {
     "E_ADJUST":           "Awaiting Adjustment",
     "E_APPROVED":         "Approved",
+    "Đã duyệt":           "Approved",
     "E_WAITING_APPROVE":  "Awaiting Approval",
     "E_WAITING_HANDLING": "Awaiting Action",
 }
