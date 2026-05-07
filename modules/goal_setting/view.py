@@ -134,6 +134,7 @@ def render():
 
     with col_dg_bar:
         dg_sorted = dg_comp_df.sort_values("Completion%", ascending=True)
+        _dg_chart_h = max(320, 48 * len(dg_sorted))
         dg_bar = px.bar(
             dg_sorted,
             x="Completion%", y="Department Group", orientation="h",
@@ -143,7 +144,7 @@ def render():
             ),
         )
         dg_bar = make_chart_fig(dg_bar, "Completion % by Dept Group")
-        dg_bar.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %")
+        dg_bar.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %", height=_dg_chart_h)
         st.plotly_chart(dg_bar, use_container_width=True)
 
     with col_dg_stack:
@@ -165,7 +166,7 @@ def render():
         )
         dg_stacked_fig.update_traces(textposition="inside", insidetextanchor="middle")
         dg_stacked_fig = make_chart_fig(dg_stacked_fig, "Status Breakdown by Dept Group")
-        dg_stacked_fig.update_layout(yaxis_title="", xaxis_title="Count")
+        dg_stacked_fig.update_layout(yaxis_title="", xaxis_title="Count", height=_dg_chart_h)
         st.plotly_chart(dg_stacked_fig, use_container_width=True)
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
@@ -177,6 +178,7 @@ def render():
 
     with col_comp_bar:
         comp_sorted = dept_comp_df.sort_values("Completion%", ascending=True)
+        _dept_chart_h = max(420, 36 * len(comp_sorted))
         bar_comp = px.bar(
             comp_sorted,
             x="Completion%", y="Department", orientation="h",
@@ -186,7 +188,7 @@ def render():
             ),
         )
         bar_comp = make_chart_fig(bar_comp, "Completion % by Department")
-        bar_comp.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %")
+        bar_comp.update_layout(showlegend=False, yaxis_title="", xaxis_title="Completion %", height=_dept_chart_h)
         st.plotly_chart(bar_comp, use_container_width=True)
 
     with col_comp_stack:
@@ -208,7 +210,7 @@ def render():
         )
         stacked_fig.update_traces(textposition="inside", insidetextanchor="middle")
         stacked_fig = make_chart_fig(stacked_fig, "Status Breakdown by Department")
-        stacked_fig.update_layout(yaxis_title="", xaxis_title="Count")
+        stacked_fig.update_layout(yaxis_title="", xaxis_title="Count", height=_dept_chart_h)
         st.plotly_chart(stacked_fig, use_container_width=True)
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
