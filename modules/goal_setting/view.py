@@ -9,13 +9,30 @@ from utils.ui_helpers import (
 from config import LOW_COMPLETION_THRESHOLD
 
 _STATUS_LABEL_MAP = {
-    "E_ADJUST":           "Awaiting Adjustment",
-    "E_APPROVED":         "Approved",
-    "Đã duyệt":           "Approved",
-    "E_WAITING_APPROVE":  "Awaiting Approval",
-    "E_WAITING_HANDLING": "Awaiting Action",
+    # Not Started
+    "E_WAITING_HANDLING":   "Not Started",
+    "Chờ xử lý":            "Not Started",
+    # In Progress
+    "E_WAITING_APPROVE":    "Awaiting Approval",
+    "Chờ duyệt":            "Awaiting Approval",
+    "E_ADJUST":             "Awaiting Adjustment",
+    "Yêu cầu điều chỉnh":   "Awaiting Adjustment",
+    # Completed
+    "E_APPROVED":           "Approved",
+    "Đã duyệt":             "Approved",
+    "Approved":             "Approved",
+    "E_CANCELLED":          "Cancelled",
+    "Hủy":                  "Cancelled",
+    "Cancelled":            "Cancelled",
 }
-_STATUS_LABEL_MAP_INV = {v: k for k, v in _STATUS_LABEL_MAP.items()}
+
+
+def _get_raw_statuses(display_labels: list) -> list:
+    """Map display label(s) back to all matching raw status codes."""
+    raw = []
+    for label in display_labels:
+        raw.extend(k for k, v in _STATUS_LABEL_MAP.items() if v == label)
+    return raw
 
 
 def render_sidebar():
@@ -27,7 +44,12 @@ def render_sidebar():
     goal_depts = sorted(df["Phòng ban"].dropna().unique().tolist())
     approver_options = sorted(df["Người duyệt"].dropna().unique().tolist())
     raw_statuses = sorted(df["Trạng thái"].dropna().unique().tolist())
-    status_display_options = [_STATUS_LABEL_MAP.get(s, s) for s in raw_statuses]
+    seen, status_display_options = set(), []
+    for s in raw_statuses:
+        label = _STATUS_LABEL_MAP.get(s, s)
+        if label not in seen:
+            status_display_options.append(label)
+            seen.add(label)
 
     _dept_df = dept_loader.load_department_df()
     _filter_options, _, _ = dept_loader.build_filter_options(_dept_df, goal_depts)
@@ -59,7 +81,7 @@ def render():
     selected_dept_names = [_display_to_name.get(l, l) for l in dept_labels]
     expanded_depts = sorted(dept_loader.get_all_descendant_names(selected_dept_names, _children_by_name))
 
-    status_raw = [_STATUS_LABEL_MAP_INV.get(s, s) for s in status_labels]
+    status_raw = _get_raw_statuses(status_labels)
     df = metrics.apply_filters(df, expanded_depts, approver, status_raw)
     excluded_count = len(df) - len(metrics.get_effective_df(df))
     eff_df = metrics.get_effective_df(df)
@@ -91,6 +113,9 @@ def render():
     with col_chart1:
         status_df = metrics.compute_status_distribution(eff_df)
         status_df["Status"] = status_df["Status"].replace(_STATUS_LABEL_MAP)
+        status_df = status_df.groupby("Status", as_index=False)["Count"].sum()
+        _dist_total = status_df["Count"].sum()
+        status_df["Percentage"] = (status_df["Count"] / _dist_total * 100).round(2) if _dist_total > 0 else 0.0
         status_df["label"] = status_df.apply(
             lambda r: f"{int(r['Count'])} ({r['Percentage']:.2f}%)", axis=1
         )

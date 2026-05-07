@@ -1,5 +1,5 @@
 import pandas as pd
-from config import COMPLETED_STATUSES, NOT_STARTED_STATUS
+from config import COMPLETED_STATUSES, IN_PROGRESS_STATUSES, NOT_STARTED_STATUSES
 
 _EXCLUDED_KEYWORDS = ["intern", "collaborator"]
 
@@ -20,9 +20,9 @@ def get_effective_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def compute_kpis(df: pd.DataFrame) -> dict:
     total = len(df)
-    not_started = len(df[df["Trạng thái"] == NOT_STARTED_STATUS])
-    completed = len(df[df["Trạng thái"].isin(COMPLETED_STATUSES)])
-    in_progress = total - completed - not_started
+    completed   = len(df[df["Trạng thái"].isin(COMPLETED_STATUSES)])
+    in_progress = len(df[df["Trạng thái"].isin(IN_PROGRESS_STATUSES)])
+    not_started = len(df[df["Trạng thái"].isin(NOT_STARTED_STATUSES)])
     completion_rate = completed / total if total > 0 else 0.0
     _pct = lambda n: round(n / total * 100, 2) if total > 0 else 0.0
     return {
@@ -86,7 +86,7 @@ def compute_department_comparison(df: pd.DataFrame) -> pd.DataFrame:
         .groupby("Phòng ban").size().rename("Completed")
     )
     not_started = (
-        df[df["Trạng thái"] == NOT_STARTED_STATUS]
+        df[df["Trạng thái"].isin(NOT_STARTED_STATUSES)]
         .groupby("Phòng ban").size().rename("Not Started")
     )
     result = pd.concat([total, completed, not_started], axis=1).fillna(0).reset_index()
@@ -113,7 +113,7 @@ def compute_dept_group_comparison(df: pd.DataFrame, dept_name_to_group: dict) ->
         .groupby("Dept_Group").size().rename("Completed")
     )
     not_started = (
-        tmp[tmp["Trạng thái"] == NOT_STARTED_STATUS]
+        tmp[tmp["Trạng thái"].isin(NOT_STARTED_STATUSES)]
         .groupby("Dept_Group").size().rename("Not Started")
     )
     result = pd.concat([total, completed, not_started], axis=1).fillna(0).reset_index()

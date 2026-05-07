@@ -1,7 +1,8 @@
 import os
 
-COMPLETED_STATUSES = ["E_APPROVED", "Đã duyệt", "Approved"]
-NOT_STARTED_STATUS = "E_WAITING_HANDLING"
+COMPLETED_STATUSES   = ["E_APPROVED", "E_CANCELLED", "Đã duyệt", "Hủy", "Approved", "Cancelled"]
+IN_PROGRESS_STATUSES = ["E_WAITING_APPROVE", "E_ADJUST", "Chờ duyệt", "Yêu cầu điều chỉnh"]
+NOT_STARTED_STATUSES = ["E_WAITING_HANDLING", "Chờ xử lý"]
 SNAPSHOT_WINDOW = 5
 LOW_COMPLETION_THRESHOLD = 50.0
 
