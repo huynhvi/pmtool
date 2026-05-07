@@ -60,15 +60,18 @@ def render():
 
     status_raw = [_STATUS_LABEL_MAP_INV.get(s, s) for s in status_labels]
     df = metrics.apply_filters(df, expanded_depts, approver, status_raw)
-    kpis = metrics.compute_kpis(df)
+    excluded_count = len(df) - len(metrics.get_effective_df(df))
+    eff_df = metrics.get_effective_df(df)
+    kpis = metrics.compute_kpis(eff_df)
 
     # ── TOP: KPI cards ──────────────────────────────────────────────
     render_section_header("Summary")
     render_kpi_cards([
-        {"label": "Total Goal Sheets", "value": kpis["total"],       "color": "gray"},
-        {"label": "Completed",         "value": kpis["completed"],   "color": "green"},
-        {"label": "In Progress",       "value": kpis["in_progress"], "color": "yellow"},
-        {"label": "Not Started",       "value": kpis["not_started"], "color": "red"},
+        {"label": "Total Goal Sheets",      "value": kpis["total"],       "color": "gray"},
+        {"label": "Completed",              "value": kpis["completed"],   "color": "green"},
+        {"label": "In Progress",            "value": kpis["in_progress"], "color": "yellow"},
+        {"label": "Not Started",            "value": kpis["not_started"], "color": "red"},
+        {"label": "Excluded Goal Sheets",   "value": excluded_count,      "color": "gray"},
     ])
 
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
@@ -78,7 +81,7 @@ def render():
     col_chart1, col_chart2 = st.columns([1.15, 0.85])
 
     with col_chart1:
-        status_df = metrics.compute_status_distribution(df)
+        status_df = metrics.compute_status_distribution(eff_df)
         status_df["Status"] = status_df["Status"].replace(_STATUS_LABEL_MAP)
         bar_fig = px.bar(
             status_df, x="Count", y="Status", orientation="h",
@@ -109,7 +112,7 @@ def render():
 
     with col_left:
         st.caption("Department Progress")
-        dept_df = metrics.compute_department_progress(df)
+        dept_df = metrics.compute_department_progress(eff_df)
         styled_dept = style_completion_table(dept_df, rules=[
             {"col": "Completion%", "op": "lt", "threshold": LOW_COMPLETION_THRESHOLD, "color": "#FEF2F2"},
         ]).format({"Completion%": "{:.2f}%"})
@@ -117,7 +120,7 @@ def render():
 
     with col_right:
         st.caption("Approver Workload")
-        approver_df = metrics.compute_approver_workload(df)
+        approver_df = metrics.compute_approver_workload(eff_df)
         avg_pending = float(approver_df["Pending"].mean()) if len(approver_df) > 0 else 0
         styled_approver = style_completion_table(approver_df, rules=[
             {"col": "Pending",     "op": "gt", "threshold": avg_pending,            "color": "#FFFBEB"},
@@ -128,7 +131,7 @@ def render():
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
 
     render_section_header("Dept Group Comparison")
-    dg_comp_df = metrics.compute_dept_group_comparison(df, _dept_name_to_group)
+    dg_comp_df = metrics.compute_dept_group_comparison(eff_df, _dept_name_to_group)
 
     col_dg_bar, col_dg_stack = st.columns(2)
 
@@ -172,7 +175,7 @@ def render():
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
 
     render_section_header("Department Detail Comparison")
-    dept_comp_df = metrics.compute_department_comparison(df)
+    dept_comp_df = metrics.compute_department_comparison(eff_df)
 
     col_comp_bar, col_comp_stack = st.columns(2)
 
@@ -216,7 +219,7 @@ def render():
     st.markdown('<hr class="pm-divider">', unsafe_allow_html=True)
 
     render_section_header("Follow-up Required")
-    followup_df = metrics.get_followup_list(df)
+    followup_df = metrics.get_followup_list(eff_df)
     count = len(followup_df)
     if count > 0:
         st.markdown(

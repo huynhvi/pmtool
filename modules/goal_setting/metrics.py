@@ -1,6 +1,22 @@
 import pandas as pd
 from config import COMPLETED_STATUSES, NOT_STARTED_STATUS
 
+_EXCLUDED_KEYWORDS = ["intern", "collaborator"]
+
+
+def _is_excluded_position(pos) -> bool:
+    if pd.isna(pos):
+        return False
+    pos_lower = str(pos).lower()
+    return any(kw in pos_lower for kw in _EXCLUDED_KEYWORDS)
+
+
+def get_effective_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Return df with Intern & Collaborator positions removed."""
+    if "Vị trí" not in df.columns:
+        return df
+    return df[~df["Vị trí"].apply(_is_excluded_position)].copy()
+
 
 def compute_kpis(df: pd.DataFrame) -> dict:
     total = len(df)
