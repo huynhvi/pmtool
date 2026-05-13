@@ -1,6 +1,6 @@
 import pandas as pd
 from functools import lru_cache
-from config import DEPARTMENT_DATA
+from config import DEPARTMENT_DATA, HR_STRUCTURE_DATA
 
 
 _SHEET_NAME = "Updated via PM Tool 28Ap26"
@@ -27,6 +27,28 @@ def load_department_df() -> pd.DataFrame:
         return df.dropna(subset=["code", "name"]).reset_index(drop=True)
     except Exception:
         return pd.DataFrame(columns=["code", "name", "type", "parent_code", "manager"])
+
+
+@lru_cache(maxsize=1)
+def load_hr_structure() -> pd.DataFrame:
+    try:
+        df = pd.read_excel(HR_STRUCTURE_DATA, sheet_name="Sheet1")
+        df.columns = [c.strip() for c in df.columns]
+        return df[["Mã phòng ban", "Tên phòng ban"]].dropna().reset_index(drop=True)
+    except Exception:
+        return pd.DataFrame(columns=["Mã phòng ban", "Tên phòng ban"])
+
+
+def build_dept_name_to_code(hr_df: pd.DataFrame) -> dict:
+    """Returns {dept_name: dept_code} for display-only substitution. Aggregation logic is unchanged."""
+    if hr_df.empty:
+        return {}
+    return {
+        str(row["Tên phòng ban"]).strip(): str(row["Mã phòng ban"]).strip()
+        for _, row in hr_df.iterrows()
+        if pd.notna(row["Mã phòng ban"]) and pd.notna(row["Tên phòng ban"])
+           and str(row["Mã phòng ban"]).strip() != ""
+    }
 
 
 def build_children_by_name(dept_df: pd.DataFrame) -> dict:
@@ -83,16 +105,20 @@ def build_dept_name_to_group(dept_df: pd.DataFrame) -> dict:
             if (g := find_group(row["name"])) is not None}
 
 
-def build_filter_options(dept_df: pd.DataFrame, goal_depts: list) -> tuple:
+def build_filter_options(dept_df: pd.DataFrame, goal_depts: list,
+                         name_to_code: dict = None) -> tuple:
     """Returns (options, display_to_name, children_by_name).
 
-    options: ordered display labels with hierarchy indentation
+    options: ordered display labels (codes when available) with hierarchy indentation
     display_to_name: maps each display label back to the actual dept name
     children_by_name: name -> [child names], used for descendant expansion
+    name_to_code: optional {dept_name: dept_code} for display substitution (display-only)
     """
+    _code = lambda n: (name_to_code or {}).get(n, n)
+
     if dept_df.empty:
         flat = sorted(goal_depts)
-        return flat, {d: d for d in flat}, {}
+        return [_code(d) for d in flat], {_code(d): d for d in flat}, {}
 
     children_by_name = build_children_by_name(dept_df)
     all_names = set(dept_df["name"])
@@ -107,14 +133,14 @@ def build_filter_options(dept_df: pd.DataFrame, goal_depts: list) -> tuple:
 
     ordered: list = []
     visited: set = set()
-    _NBSP = " "
+    _NBSP = " "
 
     def traverse(name: str, depth: int):
         if name in visited:
             return
         visited.add(name)
         prefix = _NBSP * 4 * depth
-        ordered.append((f"{prefix}{name}", name))
+        ordered.append((f"{prefix}{_code(name)}", name))
         for child in children_by_name.get(name, []):
             traverse(child, depth + 1)
 
@@ -125,7 +151,7 @@ def build_filter_options(dept_df: pd.DataFrame, goal_depts: list) -> tuple:
     hierarchy_names = {item[1] for item in ordered}
     for d in sorted(goal_depts):
         if d not in hierarchy_names:
-            ordered.append((d, d))
+            ordered.append((_code(d), d))
 
     options = [item[0] for item in ordered]
     display_to_name = {item[0]: item[1] for item in ordered}

@@ -52,7 +52,9 @@ def render_sidebar():
             seen.add(label)
 
     _dept_df = dept_loader.load_department_df()
-    _filter_options, _, _ = dept_loader.build_filter_options(_dept_df, goal_depts)
+    _hr_df = dept_loader.load_hr_structure()
+    _name_to_code = dept_loader.build_dept_name_to_code(_hr_df)
+    _filter_options, _, _ = dept_loader.build_filter_options(_dept_df, goal_depts, _name_to_code)
 
     with st.sidebar:
         st.header("Goal Setting Filters")
@@ -69,8 +71,10 @@ def render():
 
     goal_depts = sorted(df["Phòng ban"].dropna().unique().tolist())
     _dept_df = dept_loader.load_department_df()
+    _hr_df = dept_loader.load_hr_structure()
+    _name_to_code = dept_loader.build_dept_name_to_code(_hr_df)
     _filter_options, _display_to_name, _children_by_name = dept_loader.build_filter_options(
-        _dept_df, goal_depts
+        _dept_df, goal_depts, _name_to_code
     )
     _dept_name_to_group = dept_loader.build_dept_name_to_group(_dept_df)
 
@@ -95,7 +99,7 @@ def render():
     render_kpi_cards([
         {"label": "Total Goal Sheets",    "value": kpis["total"],       "color": "gray"},
         {"label": "Completed",            "value": kpis["completed"],   "color": "green",
-         "subtitle": f"{kpis['completed_pct']:.2f}% of effective total"},
+         "subtitle": f"Approved + Cancelled · {kpis['completed_pct']:.2f}% of effective total"},
         {"label": "In Progress",          "value": kpis["in_progress"], "color": "yellow",
          "subtitle": f"{kpis['in_progress_pct']:.2f}% of effective total"},
         {"label": "Not Started",          "value": kpis["not_started"], "color": "red",
@@ -150,6 +154,7 @@ def render():
     with col_left:
         st.caption("Department Progress")
         dept_df = metrics.compute_department_progress(eff_df)
+        dept_df["Department"] = dept_df["Department"].map(lambda n: _name_to_code.get(n, n))
         styled_dept = style_completion_table(dept_df, rules=[
             {"col": "Completion%", "op": "lt", "threshold": LOW_COMPLETION_THRESHOLD, "color": "#FEF2F2"},
         ]).format({"Completion%": "{:.2f}%"})
@@ -169,6 +174,9 @@ def render():
 
     render_section_header("Dept Group Comparison")
     dg_comp_df = metrics.compute_dept_group_comparison(eff_df, _dept_name_to_group)
+    dg_comp_df["Department Group"] = dg_comp_df["Department Group"].map(
+        lambda n: _name_to_code.get(n, n)
+    )
 
     col_dg_bar, col_dg_stack = st.columns(2)
 
@@ -213,6 +221,7 @@ def render():
 
     render_section_header("Department Detail Comparison")
     dept_comp_df = metrics.compute_department_comparison(eff_df)
+    dept_comp_df["Department"] = dept_comp_df["Department"].map(lambda n: _name_to_code.get(n, n))
 
     col_comp_bar, col_comp_stack = st.columns(2)
 

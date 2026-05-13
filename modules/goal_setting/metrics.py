@@ -2,6 +2,7 @@ import pandas as pd
 from config import COMPLETED_STATUSES, IN_PROGRESS_STATUSES, NOT_STARTED_STATUSES
 
 _EXCLUDED_KEYWORDS = ["intern", "collaborator"]
+_EXCLUDED_DEPT     = "senior management team"
 
 
 def _is_excluded_position(pos) -> bool:
@@ -12,10 +13,12 @@ def _is_excluded_position(pos) -> bool:
 
 
 def get_effective_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Return df with Intern & Collaborator positions removed."""
-    if "Vị trí" not in df.columns:
-        return df
-    return df[~df["Vị trí"].apply(_is_excluded_position)].copy()
+    """Return df with Intern/Collaborator positions and Senior Management Team removed."""
+    if "Vị trí" in df.columns:
+        df = df[~df["Vị trí"].apply(_is_excluded_position)]
+    if "Phòng ban" in df.columns:
+        df = df[df["Phòng ban"].astype(str).str.strip().str.lower() != _EXCLUDED_DEPT]
+    return df.copy()
 
 
 def compute_kpis(df: pd.DataFrame) -> dict:
@@ -57,9 +60,9 @@ def compute_department_progress(df: pd.DataFrame) -> pd.DataFrame:
         .rename("Completed")
     )
     result = pd.concat([total, completed], axis=1).fillna(0).reset_index()
-    result.columns = ["Department", "Total", "Approved"]
-    result["Approved"] = result["Approved"].astype(int)
-    result["Completion%"] = (result["Approved"] / result["Total"] * 100).round(2)
+    result.columns = ["Department", "Total", "Completed"]
+    result["Completed"] = result["Completed"].astype(int)
+    result["Completion%"] = (result["Completed"] / result["Total"] * 100).round(2)
     return result.sort_values("Completion%", ascending=False).reset_index(drop=True)
 
 
