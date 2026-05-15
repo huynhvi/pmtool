@@ -1,6 +1,6 @@
 # Goal Setting Dashboard – Enhancement Requirements
 
-> Last updated: 2026-05-07
+> Last updated: 2026-05-15
 
 ---
 
@@ -27,7 +27,7 @@ Examples:
 | --- | --- |
 | Raw Total | All uploaded rows |
 | Effective Total | Rows EXCLUDING Intern & Collaborator |
-| Completion % | Completed / Effective Total |
+| Completion % | Completed / Effective Total, where Completed includes Approved, Cancelled, and Paused statuses |
 | Excluded Goal Sheets KPI | Raw Total − Effective Total |
 
 ### 1.4 Scope of Exclusion
@@ -70,6 +70,12 @@ All status calculations MUST use the following centralized mapping. No status ma
 | E_CANCELLED | Cancelled |
 | Hủy | Cancelled |
 | Cancelled | Cancelled |
+| E_PENDING | Paused |
+| Tạm dừng | Paused |
+| Pending | Paused |
+| Paused | Paused |
+
+> Business rule: `E_PENDING` / `Tạm dừng` is treated as **Completed** for completion rate and all related completion statistics.
 
 ### 2.2 Matching Rules
 - Case-sensitive exact match on raw status code
@@ -78,7 +84,7 @@ All status calculations MUST use the following centralized mapping. No status ma
 ### 2.3 Implementation
 Status lists are centralized in `config.py`:
 ```python
-COMPLETED_STATUSES   = ["E_APPROVED", "E_CANCELLED", "Đã duyệt", "Hủy", "Approved", "Cancelled"]
+COMPLETED_STATUSES   = ["E_APPROVED", "E_CANCELLED", "E_PENDING", "Đã duyệt", "Hủy", "Tạm dừng", "Approved", "Cancelled", "Pending", "Paused"]
 IN_PROGRESS_STATUSES = ["E_WAITING_APPROVE", "E_ADJUST", "Chờ duyệt", "Yêu cầu điều chỉnh"]
 NOT_STARTED_STATUSES = ["E_WAITING_HANDLING", "Chờ xử lý"]
 ```
@@ -93,7 +99,7 @@ Display label mapping is centralized in `modules/goal_setting/view.py` (`_STATUS
 | KPI Card | Value | Subtitle |
 | --- | --- | --- |
 | Total Goal Sheets | Effective Total count | — |
-| Completed | Count of Completed records | X.XX% of effective total |
+| Completed | Count of Completed records, including Approved, Cancelled, and Paused | X.XX% of effective total |
 | In Progress | Count of In Progress records | X.XX% of effective total |
 | Not Started | Count of Not Started records | X.XX% of effective total |
 | Excluded Goal Sheets | Count of excluded records | X.XX% of raw total |
@@ -106,24 +112,27 @@ Display label mapping is centralized in `modules/goal_setting/view.py` (`_STATUS
 
 ### 3.3 Goal Sheet Status Distribution Chart
 - MUST display distribution by mapped display status (aggregated)
+- Paused statuses (`E_PENDING`, `Tạm dừng`, `Pending`, `Paused`) MUST be displayed as `Paused`
 - Bar label format: `Count (X.XX%)`
 - Uses effective dataset (Intern/Collaborator excluded)
 
 ### 3.4 Dept Group & Department Detail Comparison
 - Bar chart label: `Completed / Total (X.XX%)`
+- Completed count MUST include Approved, Cancelled, and Paused statuses
 - Stacked bar label: `Count (X.XX%)`
 - Percentage denominator = dept/group total (effective)
 
 ### 3.5 Approver Workload
 - Columns: Approver, Total, Pending, Completion%
-- Completion% = Approved / Total × 100, rounded to 2 decimal places
+- Completion% = Completed / Total × 100, rounded to 2 decimal places
+- Completed count MUST include Approved, Cancelled, and Paused statuses
 
 ---
 
 ## Part 4 – Follow-up Required List
 
 ### 4.1 Definition
-Shows all goal sheets where status is NOT in COMPLETED_STATUSES (i.e., not Approved or Cancelled).
+Shows all goal sheets where status is NOT in COMPLETED_STATUSES (i.e., not Approved, Cancelled, or Paused).
 
 ### 4.2 Columns
 | Column | Source |
@@ -152,11 +161,12 @@ Shows all goal sheets where status is NOT in COMPLETED_STATUSES (i.e., not Appro
 | AC05 | E_WAITING_HANDLING and Chờ xử lý are both counted as Not Started |
 | AC06 | E_WAITING_APPROVE, E_ADJUST, Chờ duyệt, Yêu cầu điều chỉnh are counted as In Progress |
 | AC07 | E_APPROVED, E_CANCELLED, Đã duyệt, Hủy, Approved, Cancelled are counted as Completed |
+| AC07.1 | E_PENDING, Tạm dừng, Pending, Paused are counted as Completed for completion rate and all related completion statistics |
 | AC08 | No status appears in more than one group |
-| AC09 | Completion % = Completed / Effective Total |
+| AC09 | Completion % = Completed / Effective Total, where Completed includes Approved, Cancelled, and Paused |
 | AC10 | All charts show Count and Percentage with 2 decimal places |
 | AC11 | Status Distribution chart aggregates display labels before rendering |
 | AC12 | Sidebar status filter correctly expands display label to all matching raw codes |
-| AC13 | Follow-up list shows all non-completed records (excludes Approved and Cancelled) |
+| AC13 | Follow-up list shows all non-completed records (excludes Approved, Cancelled, and Paused) |
 | AC14 | All existing filters continue working correctly |
 | AC15 | Dept Group and Department Detail comparison use effective dataset |

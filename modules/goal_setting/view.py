@@ -24,6 +24,10 @@ _STATUS_LABEL_MAP = {
     "E_CANCELLED":          "Cancelled",
     "Hủy":                  "Cancelled",
     "Cancelled":            "Cancelled",
+    "E_PENDING":            "Pending",
+    "Tạm dừng":             "Pending",
+    "Pending":              "Pending",
+    "Paused":               "Pending",
 }
 
 
@@ -99,7 +103,7 @@ def render():
     render_kpi_cards([
         {"label": "Total Goal Sheets",    "value": kpis["total"],       "color": "gray"},
         {"label": "Completed",            "value": kpis["completed"],   "color": "green",
-         "subtitle": f"Approved + Cancelled · {kpis['completed_pct']:.2f}% of effective total"},
+         "subtitle": f"Approved + Cancelled + Pending · {kpis['completed_pct']:.2f}% of effective total"},
         {"label": "In Progress",          "value": kpis["in_progress"], "color": "yellow",
          "subtitle": f"{kpis['in_progress_pct']:.2f}% of effective total"},
         {"label": "Not Started",          "value": kpis["not_started"], "color": "red",

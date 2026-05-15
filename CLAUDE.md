@@ -80,6 +80,7 @@ LOW_COMPLETION_THRESHOLD = 50.0   # % below which rows are highlighted red
 | E_ADJUST / Yêu cầu điều chỉnh | Awaiting Adjustment |
 | E_APPROVED / Đã duyệt / Approved | Approved |
 | E_CANCELLED / Hủy / Cancelled | Cancelled |
+| E_PENDING / Tạm dừng / Pending / Paused | Pending |
 
 ---
 
@@ -115,6 +116,21 @@ Accounts are loaded from Streamlit secrets; fallback hardcoded accounts exist in
 ## Enhancement History
 
 All requirement changes are recorded here in reverse-chronological order (newest first).
+
+---
+
+### [2026-05-15] feat: Add E_PENDING / Paused as Completed status
+
+**Source:** `Dashboard/Requirement/Enhance_logic_updated_pending_status.md`
+**Status:** ✅ IMPLEMENTED
+**Files changed:** `config.py`, `modules/goal_setting/view.py`, `utils/ui_helpers.py`, `CLAUDE.md`
+
+#### Changes
+- `config.py`: added `"E_PENDING"`, `"Tạm dừng"`, `"Pending"`, `"Paused"` to `COMPLETED_STATUSES`
+- `view.py:_STATUS_LABEL_MAP`: added four Paused entries → display label `"Paused"`
+- `view.py`: Completed KPI card subtitle updated to `"Approved + Cancelled + Paused · X.XX% of effective total"`
+- `ui_helpers.py:STATUS_COLORS`: added `"Paused": "#3B82F6"` (blue) for chart rendering
+- Scope: all KPI, status distribution chart, dept comparison, approver workload, follow-up list (via `COMPLETED_STATUSES`)
 
 ---
 

@@ -7,7 +7,7 @@ STATUS_COLORS = {
     "High": "#DC2626", "Medium": "#D97706", "Low": "#16A34A",
     "Completed": "#16A34A", "In Progress": "#D97706", "Not Started": "#9CA3AF",
     "E_APPROVED": "#16A34A", "E_COMPLETED": "#16A34A", "E_WAITING_HANDLING": "#9CA3AF",
-    "Approved": "#16A34A", "Cancelled": "#6B7280",
+    "Approved": "#16A34A", "Cancelled": "#6B7280", "Pending": "#3B82F6",
     "Awaiting Adjustment": "#D97706",
     "Awaiting Approval": "#D97706", "Awaiting Action": "#9CA3AF",
 }
